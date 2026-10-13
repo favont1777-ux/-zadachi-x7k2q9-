@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3355ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Задачи">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Мои задачи</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef1f7;--card:#fff;--ink:#1b2440;--mute:#7b84a0;--line:#dde2ee;--acc:#3355ff;--accink:#fff;--bad:#d6455d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12162a;--card:#1c2240;--ink:#e8ecff;--mute:#8d96b8;--line:#2a3158;--acc:#7b93ff;--accink:#0f1430;--bad:#ff7088}}
+:root[data-theme="dark"]{--bg:#12162a;--card:#1c2240;--ink:#e8ecff;--mute:#8d96b8;--line:#2a3158;--acc:#7b93ff;--accink:#0f1430;--bad:#ff7088}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+main{max-width:640px;margin:0 auto;padding:28px 16px 48px}
+h1{font-size:2rem;font-weight:800;margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 20px;font-size:.95rem}
+.add{display:flex;gap:8px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
+.add input[type=text]{flex:1 1 200px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:1rem;padding:8px;outline:0;min-width:0}
+.add input[type=date]{border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;border-radius:8px;padding:6px 8px}
+button{font:inherit;cursor:pointer}
+.go{background:var(--acc);color:var(--accink);border:0;border-radius:10px;padding:8px 18px;font-weight:600}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tabs{display:flex;gap:6px;margin:18px 0 10px}
+.tabs button{background:transparent;border:1px solid var(--line);color:var(--mute);border-radius:999px;padding:6px 14px}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+li{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+li input{width:22px;height:22px;accent-color:var(--acc);flex:none}
+.t{flex:1;min-width:0;overflow-wrap:anywhere}
+li.done .t{text-decoration:line-through;color:var(--mute)}
+.d{font-size:.8rem;color:var(--mute);display:block;margin-top:2px}
+.d.late{color:var(--bad);font-weight:600}
+.x{background:transparent;border:0;color:var(--mute);font-size:1.3rem;line-height:1;padding:4px 8px;border-radius:8px}
+.x:hover{color:var(--bad)}
+.empty{text-align:center;color:var(--mute);padding:32px 8px}
+.foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;color:var(--mute);font-size:.9rem}
+.foot button{background:transparent;border:0;color:var(--acc);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>Мои задачи</h1>
+<p class="sub" id="sub"></p>
+<div class="add">
+<input type="text" id="txt" placeholder="Новая задача" maxlength="200" aria-label="Текст задачи">
+<input type="date" id="due" aria-label="Срок">
+<button class="go" id="add">Добавить</button>
+</div>
+<div class="tabs" role="group" aria-label="Фильтр">
+<button data-f="all" aria-pressed="true">Все</button>
+<button data-f="active" aria-pressed="false">Активные</button>
+<button data-f="done" aria-pressed="false">Готово</button>
+</div>
+<ul id="list"></ul>
+<div class="foot"><span id="cnt"></span><button id="clr">Удалить выполненные</button></div>
+</main>
+<script>
+var KEY="todo-planner-v1",tasks=[],filter="all";
+try{tasks=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){tasks=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(tasks))}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function fmt(s){var p=s.split("-");return new Date(p[0],p[1]-1,p[2]).toLocaleDateString("ru-RU",{day:"numeric",month:"long"})}
+function render(){
+ var l=$("list");l.innerHTML="";
+ var vis=tasks.filter(function(t){return filter==="all"||(filter==="done")===t.done});
+ vis.sort(function(a,b){return a.done-b.done||(a.due||"9").localeCompare(b.due||"9")});
+ if(!vis.length){var e=document.createElement("li");e.className="empty";e.style.display="block";e.textContent=tasks.length?"Здесь пока ничего нет":"Задач нет. Напишите первую выше.";l.appendChild(e)}
+ vis.forEach(function(t){
+  var li=document.createElement("li");if(t.done)li.className="done";
+  var c=document.createElement("input");c.type="checkbox";c.checked=t.done;c.setAttribute("aria-label","Выполнено");
+  c.onchange=function(){t.done=c.checked;save();render()};
+  var w=document.createElement("div");w.className="t";w.textContent=t.text;
+  if(t.due){var d=document.createElement("span");d.className="d"+(!t.done&&t.due<today()?" late":"");d.textContent=(d.className.indexOf("late")>0?"Просрочено: ":"До ")+fmt(t.due);w.appendChild(d)}
+  var x=document.createElement("button");x.className="x";x.textContent="×";x.setAttribute("aria-label","Удалить");
+  x.onclick=function(){tasks=tasks.filter(function(k){return k!==t});save();render()};
+  li.append(c,w,x);l.appendChild(li)});
+ var left=tasks.filter(function(t){return!t.done}).length;
+ $("cnt").textContent="Осталось: "+left;
+ $("sub").textContent=new Date().toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});
+ $("clr").style.visibility=tasks.some(function(t){return t.done})?"visible":"hidden";
+}
+function add(){var v=$("txt").value.trim();if(!v)return;tasks.push({text:v,due:$("due").value,done:false});$("txt").value="";$("due").value="";save();render();$("txt").focus()}
+$("add").onclick=add;
+$("txt").onkeydown=function(e){if(e.key==="Enter")add()};
+$("clr").onclick=function(){tasks=tasks.filter(function(t){return!t.done});save();render()};
+document.querySelectorAll(".tabs button").forEach(function(b){b.onclick=function(){filter=b.dataset.f;document.querySelectorAll(".tabs button").forEach(function(o){o.setAttribute("aria-pressed",o===b)});render()}});
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("service-worker.js").catch(function(){})})}
+render();
+</script>
+</body>
+</html>
